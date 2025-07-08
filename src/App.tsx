@@ -6,7 +6,7 @@ function App() {
   return (
   <HashRouter>
     <div>
-      { <h1>Vellore Anand Kumar Sahil // Section 1</h1> }
+      { <h1>Vellore Anand Kumar Sahil // Section</h1> }
       <Link to="/Labs">
           <button>Go to Labs</button>
         </Link>
