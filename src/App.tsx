@@ -1,24 +1,22 @@
 import Kambaz from './Kambaz';
 import { Labs } from './Labs/index.tsx';
-import { HashRouter, Link, Route, Routes } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+
 
 function App() {
   return (
   <HashRouter>
     <div>
+      <div style={{ marginLeft: '160px', padding: '20px' }}>
       { <h1>Vellore Anand Kumar Sahil // Section 01</h1> }
-      <Link to="/Labs">
-          <button>Go to Labs</button>
-        </Link>
-        <br />
-        <Link to="/Kambaz">
-          <button>Go to Kambaz</button>
-        </Link>
+      </div>
       <Routes>
+         <Route path="/" element={<Navigate to="/Kambaz" />} />
       <Route path="Labs/*" element={<Labs />} />
       <Route path="Kambaz/*" element={<Kambaz />} />
       </Routes>
     </div>
+  
   </HashRouter>
   )
 }
