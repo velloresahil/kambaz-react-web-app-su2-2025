@@ -1,11 +1,15 @@
-import { Link } from "react-router-dom";
+import { Link , useParams } from "react-router-dom";
+import * as db from "../../Database";
+
 
 export default function AssignmentEditor() {
+  const {cid, aid} = useParams();   
+   const assignment = db.assignments.find((a:any)=> a._id === aid);
   return (
     <div id="wd-assignments-editor" className="container mt-5">
       
-      <p className="mb-4 fs-5">
-        <strong>CS5610</strong> &gt; Assignments 
+     <p className="mb-4 fs-5">
+        <strong>{cid}</strong> &gt; Assignments &gt; {assignment ? assignment.title : "Unknown Assignment"}
       </p>
 
       
@@ -14,7 +18,7 @@ export default function AssignmentEditor() {
         <label htmlFor="wd-name" className="form-label">
           <strong>Assignment Name</strong>
         </label>
-        <input id="wd-name" className="form-control" defaultValue="A1" />
+        <input id="wd-name" className="form-control" defaultValue={assignment?.title} />
       </div>
       <div className="row mb-3">
           <textarea
@@ -33,7 +37,7 @@ export default function AssignmentEditor() {
             id="wd-points"
             type="number"
             className="form-control w-50 ms-2"
-            defaultValue={100}
+            defaultValue= {assignment?.points || 100}
           />
         </div>
 
@@ -161,18 +165,18 @@ export default function AssignmentEditor() {
             <div className="row mb-3">
                 <div className="col-md-12">
                   <label htmlFor="wd-due-date" className="form-label"><strong>Due</strong></label>
-                  <input id="wd-due-date" type="date" className="form-control" defaultValue="2024-05-13" />
+                  <input id="wd-due-date" type="date" className="form-control" defaultValue={assignment?.due} />
                 </div>
               </div>
             
               <div className="row">
                 <div className="col-md-6">
                   <label htmlFor="wd-available-from" className="form-label"><strong>Available from</strong></label>
-                  <input id="wd-available-from" type="date" className="form-control" defaultValue="2024-05-06" />
+                  <input id="wd-available-from" type="date" className="form-control" defaultValue={assignment?.availableFrom} />
                 </div>
                 <div className="col-md-6">
                   <label htmlFor="wd-available-until" className="form-label"><strong>Until</strong></label>
-                  <input id="wd-available-until" type="date" className="form-control" defaultValue="2024-05-20" />
+                  <input id="wd-available-until" type="date" className="form-control" defaultValue={assignment?.availableUntil} />
                 </div>
               </div>
             </div>
