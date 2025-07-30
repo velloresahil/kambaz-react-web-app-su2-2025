@@ -1,7 +1,11 @@
 import { IoEllipsisVertical } from "react-icons/io5";
 import { IoIosAdd } from "react-icons/io";
+import { useNavigate, useParams } from "react-router-dom";
+
 
 export default function AssignmentPercentageButton() {
+  const navigate = useNavigate();
+  const { cid } = useParams();
   return (
     <div className="d-flex align-items-center">
       <button
@@ -12,7 +16,12 @@ export default function AssignmentPercentageButton() {
       >
         40% of Total
       </button>
-      <IoIosAdd className="fs-4 me-2" />
+      <IoIosAdd
+        className="fs-4 me-2 text-success"
+        role="button"
+        style={{ cursor: "pointer" }}
+        onClick={() => navigate(`/Kambaz/Courses/${cid}/Assignments/new`)}
+      />
       <IoEllipsisVertical className="fs-4" />
     </div>
   );

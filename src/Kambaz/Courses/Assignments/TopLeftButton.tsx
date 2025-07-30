@@ -1,6 +1,10 @@
 import { FaPlus } from "react-icons/fa6";
+import { useNavigate, useParams } from "react-router-dom";
+
 
 export function TopLeftButton() {
+  const navigate = useNavigate();
+  const { cid } = useParams();
     return (
       <div className="d-flex">
         <button
@@ -15,6 +19,7 @@ export function TopLeftButton() {
           id="wd-add-assignment-btn"
           className="btn btn-sm btn-danger d-flex align-items-center justify-content-center"
           style={{ height: "36px", padding: "0 16px", fontSize: "14px" }}
+          onClick={() => navigate(`/Kambaz/Courses/${cid}/Assignments/new`)} 
         >
           <FaPlus className="me-2" />
           Assignment

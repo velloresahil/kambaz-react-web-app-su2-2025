@@ -1,3 +1,5 @@
+import store from "./Kambaz/store";
+import { Provider } from "react-redux";
 import Kambaz from './Kambaz';
 import { Labs } from './Labs/index.tsx';
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
@@ -6,6 +8,8 @@ import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 function App() {
   return (
   <HashRouter>
+     <Provider store={store}>
+
     <div>
       <div style={{ marginLeft: '160px', padding: '20px' }}>
       { <h1>Vellore Anand Kumar Sahil // Section 01</h1> }
@@ -16,7 +20,7 @@ function App() {
       <Route path="Kambaz/*" element={<Kambaz />} />
       </Routes>
     </div>
-  
+     </Provider>
   </HashRouter>
   )
 }

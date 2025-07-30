@@ -1,97 +1,52 @@
-import { Link } from "react-router-dom";
+import {  useNavigate} from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { setCurrentUser } from "./reducer";
+import { Button, FormControl } from "react-bootstrap";
 
 export default function Profile() {
+  const [profile, setProfile] = useState<any>({});
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { currentUser } = useSelector((state: any) => state.accountReducer);
+  const fetchProfile = () => {
+    if (!currentUser) return navigate("/Kambaz/Account/Signin");
+    setProfile(currentUser);
+  };
+  const signout = () => {
+    dispatch(setCurrentUser(null));
+    navigate("/Kambaz/Account/Signin");
+  };
+  useEffect(() => { fetchProfile(); }, []);
+
   return (
     <div id="wd-profile-screen" className="container mt-4">
      
       <h3 className="text-start mb-4">Profile</h3>
 
      
-      <form style={{ maxWidth: "500px" }}>
-       
-
-      
-        <div className="mb-3">
-          <input
-            id="wd-username"
-            className="form-control"
-            defaultValue="alice"
-            placeholder="Username"
-            type="text"
-          />
-        </div>
-
-        
-        <div className="mb-3">
-          <input
-            id="wd-password"
-            className="form-control"
-            defaultValue="123"
-            placeholder="Password"
-            type="password"
-          />
-        </div>
-
-      
-        <div className="mb-3">
-          <input
-            id="wd-firstname"
-            className="form-control"
-            defaultValue="Alice"
-            placeholder="First Name"
-            type="text"
-          />
-        </div>
-
-      
-        <div className="mb-3">
-          <input
-            id="wd-lastname"
-            className="form-control"
-            defaultValue="Wonderland"
-            placeholder="Last Name"
-            type="text"
-          />
-        </div>
-
-       
-        <div className="mb-3">
-          <input
-            id="wd-dob"
-            className="form-control"
-            defaultValue="2000-01-01"
-            placeholder="Date of Birth"
-            type="date"
-          />
-        </div>
-
-        
-        <div className="mb-3">
-          <input
-            id="wd-email"
-            className="form-control"
-            defaultValue="alice@wonderland"
-            placeholder="Email"
-            type="email"
-          />
-        </div>
-
-        <div className="mb-3">
-          <select id="wd-role" className="form-control">
-            <option value="USER">User</option>
-            <option value="ADMIN">Admin</option>
-            <option value="FACULTY">Faculty</option>
-            <option value="STUDENT">Student</option>
+     {profile && (
+        <div>
+          <FormControl defaultValue={profile.username} id="wd-username" className="mb-2"
+                       onChange={(e) => setProfile({ ...profile, username:  e.target.value })}/>
+          <FormControl defaultValue={profile.password} id="wd-password" className="mb-2"
+                       onChange={(e) => setProfile({ ...profile, password:  e.target.value })}/>
+          <FormControl defaultValue={profile.firstName} id="wd-firstname" className="mb-2"
+                       onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}/>
+          <FormControl defaultValue={profile.lastName} id="wd-lastname" className="mb-2"
+                       onChange={(e) => setProfile({ ...profile, lastName:  e.target.value })}/>
+          <FormControl defaultValue={profile.dob} id="wd-dob" className="mb-2"
+                       onChange={(e) => setProfile({ ...profile, dob: e.target.value })} type="date"/>
+          <FormControl defaultValue={profile.email} id="wd-email" className="mb-2"
+                       onChange={ (e) => setProfile({ ...profile, email: e.target.value })}/>
+          <select onChange={(e) => setProfile({ ...profile, role:  e.target.value })}
+                 className="form-control mb-2" id="wd-role">
+            <option value="USER">User</option>            <option value="ADMIN">Admin</option>
+            <option value="FACULTY">Faculty</option>      <option value="STUDENT">Student</option>
           </select>
+          <Button onClick={signout} className="btn btn-danger" id="wd-signout-btn">
+            Sign out
+          </Button>
         </div>
-
-      
-        <div className="d-flex justify-content-between mt-4">
-          <Link to="/Kambaz/Account/Signin" className="btn btn-danger">
-            Sign Out
-          </Link>
-        </div>
-      </form>
-    </div>
-  );
-}
+      )}
+</div>);}
