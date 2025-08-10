@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import {Route, Routes} from "react-router";
 import CourseNavigation from "./Navigation.tsx";
 import Modules from "./Modules";

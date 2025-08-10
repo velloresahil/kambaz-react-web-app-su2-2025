@@ -1,33 +1,49 @@
+// src/Kambaz/Account/client.ts
 import axios from "axios";
-const axiosWithCredentials = axios.create({ withCredentials: true });
-export const REMOTE_SERVER = import.meta.env.VITE_REMOTE_SERVER;
-export const USERS_API = `${REMOTE_SERVER}/api/users`;
 
+export const REMOTE_SERVER = import.meta.env.VITE_REMOTE_SERVER; // e.g., http://localhost:4000
+
+// UPDATED: single axios instance with baseURL + credentials
+const api = axios.create({
+  baseURL: `${REMOTE_SERVER}/api`,
+  withCredentials: true,
+});
+
+// ---- Users ----
 export const signin = async (credentials: any) => {
-    const response = await axiosWithCredentials.post( `${USERS_API}/signin`, credentials );
-    return response.data;
+  const { data } = await api.post(`/users/signin`, credentials);
+  return data;
 };
+
 export const signup = async (user: any) => {
-    const response = await axiosWithCredentials.post(`${USERS_API}/signup`, user);
-    return response.data;
+  const { data } = await api.post(`/users/signup`, user);
+  return data;
 };
+
 export const updateUser = async (user: any) => {
-    const response = await axiosWithCredentials.put(`${USERS_API}/${user._id}`, user);
-    return response.data;
+  const { data } = await api.put(`/users/${user._id}`, user);
+  return data;
 };
+
 export const profile = async () => {
-    const response = await axiosWithCredentials.post(`${USERS_API}/profile`);
-    return response.data;
+  const { data } = await api.get(`/users/profile`); // UPDATED: GET (was POST)
+  return data;
 };
+
 export const signout = async () => {
-    const response = await axiosWithCredentials.post(`${USERS_API}/signout`);
-    return response.data;
+  const { data } = await api.post(`/users/signout`);
+  return data;
 };
+
+// ---- Current user's courses ----
 export const findMyCourses = async () => {
-    const { data } = await axiosWithCredentials.get(`${USERS_API}/current/courses`);
-    return data;
+  const { data } = await api.get(`/users/current/courses`); // unchanged path, now GET
+  return data;
 };
+
+// ---- Create a course (faculty) ----
+// UPDATED: moved from /users/current/courses → /courses
 export const createCourse = async (course: any) => {
-    const { data } = await axiosWithCredentials.post(`${USERS_API}/current/courses`, course);
-    return data;
+  const { data } = await api.post(`/courses`, course);
+  return data;
 };

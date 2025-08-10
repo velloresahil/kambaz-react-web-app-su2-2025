@@ -2,27 +2,33 @@
 import { useSelector } from "react-redux";
 import { Navigate, useParams } from "react-router-dom";
 
-export default function ProtectedRoute({children, requireEnrollment = false}: { children: any; requireEnrollment?: boolean;
+export default function ProtectedRoute({
+  children,
+  requireEnrollment = false,
+  enrolledCourseIds,
+  coursesReady = true, // NEW: wait until we know the student’s enrollments
+}: {
+  children: any;
+  requireEnrollment?: boolean;
+  enrolledCourseIds?: string[];
+  coursesReady?: boolean;
 }) {
-    const { currentUser } = useSelector((state: any) => state.accountReducer);
-    const { cid } = useParams();
-    const { enrollments } = useSelector((state: any)=>state.enrollmentsReducer);
+  const { currentUser } = useSelector((s: any) => s.accountReducer);
+  const { cid } = useParams();
 
-    if (!currentUser) {
-        return <Navigate to="/Kambaz/Account/Signin" />;
-    }
+  if (!currentUser) return <Navigate to="/Kambaz/Account/Signin" />;
 
-    if (requireEnrollment && cid) {
-        const isEnrolled = enrollments.some(
-            (enrollment: any) =>
-                enrollment.user === currentUser._id &&
-                enrollment.course === cid
-        );
+  if (requireEnrollment) {
+    // Faculty: always allow
+    if (currentUser.role === "FACULTY") return children;
 
-        if (!isEnrolled) {
-            return <Navigate to="/Kambaz/Dashboard" />;
-        }
-    }
+    // Students: wait until we’ve loaded their enrolled course IDs
+    if (!coursesReady) return null;
 
-    return children;
+    // Then check membership
+    const ids = new Set(enrolledCourseIds ?? []);
+    if (cid && !ids.has(cid)) return <Navigate to="/Kambaz/Dashboard" replace />;
+  }
+
+  return children;
 }
