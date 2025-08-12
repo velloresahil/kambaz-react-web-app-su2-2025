@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import {Button, Form} from "react-bootstrap";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
