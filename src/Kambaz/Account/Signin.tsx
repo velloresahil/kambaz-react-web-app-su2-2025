@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {Button, Form} from "react-bootstrap";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -29,13 +30,9 @@ export default function Signin() {
                           placeholder="password" type="password"
                           className="mb-2"/>
             <Button onClick={signin} id="wd-signin-btn" className="w-100" > Sign in </Button>
-            <p className="mt-2">
-               Don’t have an account?{" "}
-               <Link to="/Kambaz/Account/Signup" className="link-primary">
-                         Sign up
-                </Link>
-</p>
-
+            <Link id="wd-signup-link" to="/Kambaz/Account/Signup">
+                Sign up
+            </Link>
         </div>
     );
 }
