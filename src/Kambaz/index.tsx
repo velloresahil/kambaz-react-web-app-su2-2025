@@ -12,6 +12,9 @@ import * as userClient from "./Account/client";
 import * as courseClient from "./Courses/client"
 import {useEffect, useState} from "react";
 import {useSelector} from "react-redux";
+import QuizDetails from "./Courses/Quizzes/Details.tsx";
+import QuizPreview from "./Courses/Quizzes/Preview";
+import QuizEditor from "./Courses/Quizzes/Editor";
 
 export default function Kambaz() {
     const [courses, setCourses] = useState<any[]>([]);
@@ -23,7 +26,10 @@ export default function Kambaz() {
     };
     const [course, setCourse] = useState<any>(defaultCourse);
 
+    
+
     const fetchCourses = async () => {
+         if (!currentUser?._id) return;  
         try {
             const courses = await userClient.findCoursesForUser(currentUser._id)  ;
             setCourses(courses);
@@ -42,6 +48,7 @@ export default function Kambaz() {
     };
 
     useEffect(() => {
+        if (!currentUser?._id) return;   
         fetchCourses();
         fetchAllCourses();
     }, [currentUser]);
@@ -74,6 +81,7 @@ export default function Kambaz() {
 
 
     const enroll = async(courseId: string) => {
+        if (!currentUser?._id) return;   
         await userClient.enrollIntoCourse(currentUser._id, courseId);
         const course = allCourses.find((course: any) => course._id === courseId);
         setCourses([...courses, course])
@@ -81,6 +89,7 @@ export default function Kambaz() {
 
 
     const unEnroll = async(courseId: string) => {
+        if (!currentUser?._id) return;   
         await userClient.unenrollFromCourse(currentUser._id, courseId);
         setCourses(courses.filter((course) => course._id !== courseId));
     }
@@ -111,6 +120,10 @@ export default function Kambaz() {
                                 </ProtectedRoute>
                             }
                         />
+                        <Route path="quizzes/:qid" element={<QuizDetails />} />
+                        <Route path="quizzes/:qid/preview" element={<QuizPreview />} />
+                        <Route path="quizzes/:qid/edit" element={<QuizEditor />} />
+
                        <Route path="Courses/:cid/*" element={<Courses courses={courses} />} />
                         <Route path="/Calendar" element={<h1>Calendar</h1>}/>
                         <Route path="/Inbox" element={<h1>Inbox</h1>}/>

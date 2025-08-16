@@ -10,6 +10,8 @@ import PeopleTable from "./People/Table.tsx";
 import {useLocation, useParams} from "react-router-dom";
 import * as courseClient from "./client.ts";
 import {useEffect, useState} from "react";
+import Quizzes from "./Quizzes/index.tsx";
+
 
 export default function Courses({ courses }: { courses: any[]; }) {
     const { cid } = useParams();
@@ -41,7 +43,7 @@ export default function Courses({ courses }: { courses: any[]; }) {
                             <Route path="Assignments/:aid" element={<AssignmentEditor />} />
                             <Route path="Assignments/create" element={<AssignmentEditor />} />
                             <Route path="Zoom" element={<h1>Zoom</h1>} />
-                            <Route path="Quizzes" element={<h1>Quizzes</h1>} />
+                             <Route path="Quizzes" element={<Quizzes />} /> 
                             <Route path="Piazza" element={<h1>Piazza</h1>} />
                             <Route path="People" element={<PeopleTable users={enrolledUsers} />} />
                         </Routes>
