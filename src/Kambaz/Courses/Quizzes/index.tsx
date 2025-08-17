@@ -1,6 +1,7 @@
 // src/Kambaz/Courses/Quizzes/index.tsx
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
+import { useSelector } from "react-redux";                 // ← PERMISSIONS: added
 import {
   listQuizzesByCourse,
   createQuiz,
@@ -15,6 +16,12 @@ export default function QuizzesList() {
   const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // PERMISSIONS: read role from redux (no other logic changed)
+  const { currentUser } = useSelector((s: any) => s.accountReducer || {});
+  const isFaculty = ["FACULTY", "PROFESSOR", "INSTRUCTOR"].includes(
+    (currentUser?.role || "").toUpperCase()
+  );
 
   const load = async () => {
     if (!cid) return;
@@ -59,12 +66,15 @@ export default function QuizzesList() {
     <div className="p-3">
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2 className="h5 m-0">Quizzes</h2>
-        <button className="btn btn-primary" onClick={onAdd}>+ Quiz</button>
+        {/* PERMISSIONS: + Quiz visible only to faculty */}
+        {isFaculty && (
+          <button className="btn btn-primary" onClick={onAdd}>+ Quiz</button>
+        )}
       </div>
 
       {quizzes.length === 0 ? (
         <div className="text-muted">
-          No quizzes yet. Click <b>+ Quiz</b> to create one.
+          No quizzes yet.{isFaculty && <> Click <b>+ Quiz</b> to create one.</>}
         </div>
       ) : (
         <ul className="list-group">
@@ -93,18 +103,24 @@ export default function QuizzesList() {
                       Questions {q.questions?.length ?? 0}
                     </div>
                   </div>
-                  <div className="d-flex gap-2">
-                    <button
-                      className={`btn btn-sm ${q.published ? "btn-success" : "btn-outline-secondary"}`}
-                      title={q.published ? "Unpublish" : "Publish"}
-                      onClick={() => togglePublish(q)}
-                    >
-                      {q.published ? "✅" : "🚫"}
-                    </button>
-                    <button className="btn btn-sm btn-outline-danger" onClick={() => onDelete(q.quizId)}>
-                      Delete
-                    </button>
-                  </div>
+                  {/* PERMISSIONS: Publish/Unpublish and Delete only for faculty */}
+                  {isFaculty && (
+                    <div className="d-flex gap-2">
+                      <button
+                        className={`btn btn-sm ${q.published ? "btn-success" : "btn-outline-secondary"}`}
+                        title={q.published ? "Unpublish" : "Publish"}
+                        onClick={() => togglePublish(q)}
+                      >
+                        {q.published ? "✅" : "🚫"}
+                      </button>
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => onDelete(q.quizId)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               </li>
             );

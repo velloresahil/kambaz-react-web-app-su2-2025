@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams, Navigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
   getQuiz,
   updateQuiz,
@@ -23,8 +24,15 @@ export default function QuizEditor() {
   const { qid } = useParams();
   const navigate = useNavigate();
 
+  // ROLE-GATE: read user & compute faculty flag
+  const { currentUser } = useSelector((s: any) => s.accountReducer || {});
+  const isFaculty = currentUser?.role === "FACULTY"; // adjust to your role string
+
   const [quiz, setQuiz] = useState<any | null>(null);
   const [tab, setTab] = useState<"details" | "questions">("details");
+
+  // ✱ saved banner state
+  const [justSaved, setJustSaved] = useState(false); // ✱
 
   // local form state for details
   const [form, setForm] = useState<any>({
@@ -44,6 +52,20 @@ export default function QuizEditor() {
     lockAfterAnswering: false,
     dates: { availableFrom: "", availableUntil: "", dueDate: "" },
   });
+
+  // Normalize to <input type="datetime-local">
+  const toLocalInput = (v?: string) => {
+    if (!v) return "";
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    const mm = pad(d.getMonth() + 1);
+    const dd = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const mi = pad(d.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  };
 
   const load = async () => {
     if (!qid) return;
@@ -66,25 +88,42 @@ export default function QuizEditor() {
       webcamRequired: !!d.webcamRequired,
       lockAfterAnswering: !!d.lockAfterAnswering,
       dates: {
-        availableFrom: d.dates?.availableFrom || "",
-        availableUntil: d.dates?.availableUntil || "",
-        dueDate: d.dates?.dueDate || "",
+        availableFrom: toLocalInput(d.dates?.availableFrom),
+        availableUntil: toLocalInput(d.dates?.availableUntil),
+        dueDate: toLocalInput(d.dates?.dueDate),
       },
     });
   };
 
-  useEffect(() => { load(); }, [qid]);
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qid]);
 
-  // ---- QUESTIONS (no hook) ----
+  // ---- QUESTIONS (no useMemo: keep hook order stable) ----
   const questions: Question[] = (quiz?.questions ?? []) as Question[];
 
   if (!quiz) return <div className="p-3">Loading…</div>;
 
+  // ROLE-GATE (defense-in-depth)
+  if (!isFaculty) {
+    return <Navigate to={`/quizzes/${qid}/preview`} replace />;
+  }
+
+  // ✱ Save-in-place (no navigation). Reload and flash a tiny “Saved” state.
   const onSaveDetails = async () => {
     if (!qid) return;
     await updateQuiz(qid, form);
-    navigate(`/quizzes/${qid}`);   // <- no /Kambaz prefix
+    await load();                 // ✱ repopulate fields from DB
+    setJustSaved(true);           // ✱ show saved banner briefly
+    setTimeout(() => setJustSaved(false), 1500); // ✱
   };
+
+  // ✱ Back button: go to previous page, or fallback to quiz details
+  const onBack = () => {                                 // ✱
+    if (window.history.length > 1) navigate(-1);         // ✱
+    else navigate(`/quizzes/${qid}`);                    // ✱
+  };                                                     // ✱
 
   const createBlankQuestion = (): Question => ({
     questionId: "",
@@ -114,6 +153,8 @@ export default function QuizEditor() {
     if (!qid || !q.questionId) return;
     await updateQuestion(qid, q.questionId, q);
     await load();
+    setJustSaved(true);                    // ✱ feedback for per-question saves
+    setTimeout(() => setJustSaved(false), 1200); // ✱
   };
 
   const onDeleteQuestion = async (questionId: string) => {
@@ -129,10 +170,17 @@ export default function QuizEditor() {
   return (
     <div className="p-3">
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2 className="h5 m-0">Edit Quiz</h2>
+        <div className="d-flex align-items-center gap-3">
+          <h2 className="h5 m-0">Edit Quiz</h2>
+          {justSaved && <span className="text-success small">Saved ✓</span>}{/* ✱ */}
+        </div>
         <div className="d-flex gap-2">
-          <Link to={`/quizzes/${qid}`} className="btn btn-secondary">Cancel</Link>
-          <button className="btn btn-primary" onClick={onSaveDetails}>Save</button>
+          <button onClick={onBack} className="btn btn-secondary">Back</button>{/* ✱ changed from Cancel to Back */}
+          {isFaculty && (
+            <button className="btn btn-primary" onClick={onSaveDetails}>
+              Save
+            </button>
+          )}
         </div>
       </div>
 
@@ -163,6 +211,7 @@ export default function QuizEditor() {
               className="form-control"
               value={form.title}
               onChange={(e) => setField("title", e.target.value)}
+              disabled={!isFaculty}
             />
           </div>
 
@@ -173,6 +222,7 @@ export default function QuizEditor() {
               rows={4}
               value={form.description}
               onChange={(e) => setField("description", e.target.value)}
+              disabled={!isFaculty}
             />
           </div>
 
@@ -183,6 +233,7 @@ export default function QuizEditor() {
                 className="form-select"
                 value={form.quizType}
                 onChange={(e) => setField("quizType", e.target.value)}
+                disabled={!isFaculty}
               >
                 <option>Graded Quiz</option>
                 <option>Practice Quiz</option>
@@ -196,6 +247,7 @@ export default function QuizEditor() {
                 className="form-select"
                 value={form.assignmentGroup}
                 onChange={(e) => setField("assignmentGroup", e.target.value)}
+                disabled={!isFaculty}
               >
                 <option>Quizzes</option>
                 <option>Exams</option>
@@ -210,6 +262,7 @@ export default function QuizEditor() {
                 className="form-control"
                 value={form.points}
                 onChange={(e) => setField("points", Number(e.target.value))}
+                disabled={!isFaculty}
               />
             </div>
           </div>
@@ -221,6 +274,7 @@ export default function QuizEditor() {
                 type="checkbox"
                 checked={form.shuffleAnswers}
                 onChange={(e) => setField("shuffleAnswers", e.target.checked)}
+                disabled={!isFaculty}
               />
             </div>
             <div className="col-md-4">
@@ -230,6 +284,7 @@ export default function QuizEditor() {
                 className="form-control"
                 value={form.timeLimit}
                 onChange={(e) => setField("timeLimit", Number(e.target.value))}
+                disabled={!isFaculty}
               />
             </div>
             <div className="col-md-4">
@@ -238,6 +293,7 @@ export default function QuizEditor() {
                 type="checkbox"
                 checked={form.multipleAttempts}
                 onChange={(e) => setField("multipleAttempts", e.target.checked)}
+                disabled={!isFaculty}
               />
               {form.multipleAttempts && (
                 <div className="mt-2">
@@ -247,6 +303,7 @@ export default function QuizEditor() {
                     className="form-control"
                     value={form.maxAttempts}
                     onChange={(e) => setField("maxAttempts", Number(e.target.value))}
+                    disabled={!isFaculty}
                   />
                 </div>
               )}
@@ -260,6 +317,7 @@ export default function QuizEditor() {
                 type="checkbox"
                 checked={form.showCorrectAnswers}
                 onChange={(e) => setField("showCorrectAnswers", e.target.checked)}
+                disabled={!isFaculty}
               />
             </div>
             <div className="col-md-4">
@@ -268,6 +326,7 @@ export default function QuizEditor() {
                 className="form-control"
                 value={form.accessCode}
                 onChange={(e) => setField("accessCode", e.target.value)}
+                disabled={!isFaculty}
               />
             </div>
             <div className="col-md-4">
@@ -276,25 +335,7 @@ export default function QuizEditor() {
                 type="checkbox"
                 checked={form.oneQuestionAtATime}
                 onChange={(e) => setField("oneQuestionAtATime", e.target.checked)}
-              />
-            </div>
-          </div>
-
-          <div className="row g-3 mt-1">
-            <div className="col-md-4">
-              <label className="form-label">Webcam Required</label><br />
-              <input
-                type="checkbox"
-                checked={form.webcamRequired}
-                onChange={(e) => setField("webcamRequired", e.target.checked)}
-              />
-            </div>
-            <div className="col-md-4">
-              <label className="form-label">Lock Questions After Answering</label><br />
-              <input
-                type="checkbox"
-                checked={form.lockAfterAnswering}
-                onChange={(e) => setField("lockAfterAnswering", e.target.checked)}
+                disabled={!isFaculty}
               />
             </div>
           </div>
@@ -307,6 +348,7 @@ export default function QuizEditor() {
                 className="form-control"
                 value={form.dates.dueDate || ""}
                 onChange={(e) => setDate("dueDate", e.target.value)}
+                disabled={!isFaculty}
               />
             </div>
             <div className="col-md-4">
@@ -316,6 +358,7 @@ export default function QuizEditor() {
                 className="form-control"
                 value={form.dates.availableFrom || ""}
                 onChange={(e) => setDate("availableFrom", e.target.value)}
+                disabled={!isFaculty}
               />
             </div>
             <div className="col-md-4">
@@ -325,6 +368,7 @@ export default function QuizEditor() {
                 className="form-control"
                 value={form.dates.availableUntil || ""}
                 onChange={(e) => setDate("availableUntil", e.target.value)}
+                disabled={!isFaculty}
               />
             </div>
           </div>
@@ -337,9 +381,11 @@ export default function QuizEditor() {
             <div className="fw-semibold">
               Points total: {quiz?.details?.points ?? 0}
             </div>
-            <button className="btn btn-primary" onClick={onAddQuestion}>
-              + New Question
-            </button>
+            {isFaculty && (
+              <button className="btn btn-primary" onClick={onAddQuestion}>
+                + New Question
+              </button>
+            )}
           </div>
 
           {questions.length === 0 && (
@@ -352,6 +398,7 @@ export default function QuizEditor() {
               q={q}
               onSave={onUpdateQuestion}
               onDelete={() => onDeleteQuestion(q.questionId)}
+              isFaculty={isFaculty}
             />
           ))}
         </div>
@@ -365,15 +412,18 @@ function QuestionEditor({
   q,
   onSave,
   onDelete,
+  isFaculty,
 }: {
   q: Question;
   onSave: (q: Question) => void;
   onDelete: () => void;
+  isFaculty: boolean;
 }) {
   const [draft, setDraft] = useState<Question>(q);
   useEffect(() => setDraft(q), [q]);
 
-  const set = (k: keyof Question, v: any) => setDraft({ ...draft, [k]: v });
+  const set = (k: keyof Question, v: any) =>
+    setDraft({ ...draft, [k]: v });
 
   // ensure arrays exist
   const answers = draft.possibleAnswers ?? [];
@@ -383,12 +433,22 @@ function QuestionEditor({
       <div className="d-flex justify-content-between align-items-center">
         <div className="fw-semibold">{draft.questionTitle}</div>
         <div className="d-flex gap-2">
-          <button className="btn btn-sm btn-outline-secondary" onClick={() => onSave(draft)}>
-            Save
-          </button>
-          <button className="btn btn-sm btn-outline-danger" onClick={onDelete}>
-            Delete
-          </button>
+          {isFaculty && (
+            <button
+              className="btn btn-sm btn-outline-secondary"
+              onClick={() => onSave(draft)}
+            >
+              Save
+            </button>
+          )}
+          {isFaculty && (
+            <button
+              className="btn btn-sm btn-outline-danger"
+              onClick={onDelete}
+            >
+              Delete
+            </button>
+          )}
         </div>
       </div>
 
@@ -399,6 +459,7 @@ function QuestionEditor({
             className="form-control"
             value={draft.questionTitle}
             onChange={(e) => set("questionTitle", e.target.value)}
+            disabled={!isFaculty}
           />
         </div>
         <div className="col-md-3">
@@ -407,6 +468,7 @@ function QuestionEditor({
             className="form-select"
             value={draft.questionType}
             onChange={(e) => set("questionType", e.target.value)}
+            disabled={!isFaculty}
           >
             <option value="multiple-choice">Multiple Choice</option>
             <option value="true-false">True / False</option>
@@ -420,6 +482,7 @@ function QuestionEditor({
             className="form-control"
             value={draft.points}
             onChange={(e) => set("points", Number(e.target.value))}
+            disabled={!isFaculty}
           />
         </div>
       </div>
@@ -431,6 +494,7 @@ function QuestionEditor({
           rows={3}
           value={draft.questionDescription}
           onChange={(e) => set("questionDescription", e.target.value)}
+          disabled={!isFaculty}
         />
       </div>
 
@@ -439,12 +503,14 @@ function QuestionEditor({
         <div className="mt-2">
           <div className="d-flex justify-content-between align-items-center mb-2">
             <div className="fw-semibold">Choices</div>
-            <button
-              className="btn btn-sm btn-outline-primary"
-              onClick={() => set("possibleAnswers", [...answers, "New option"])}
-            >
-              + Add Choice
-            </button>
+            {isFaculty && (
+              <button
+                className="btn btn-sm btn-outline-primary"
+                onClick={() => set("possibleAnswers", [...answers, "New option"])}
+              >
+                + Add Choice
+              </button>
+            )}
           </div>
           {(answers.length ? answers : []).map((opt, i) => (
             <div className="input-group mb-2" key={i}>
@@ -454,6 +520,7 @@ function QuestionEditor({
                   name={draft.questionId}
                   checked={draft.correctAnswers === opt}
                   onChange={() => set("correctAnswers", opt)}
+                  disabled={!isFaculty}
                 />
               </div>
               <input
@@ -464,17 +531,20 @@ function QuestionEditor({
                   clone[i] = e.target.value;
                   set("possibleAnswers", clone);
                 }}
+                disabled={!isFaculty}
               />
-              <button
-                className="btn btn-outline-danger"
-                onClick={() => {
-                  const clone = answers.filter((_, idx) => idx !== i);
-                  set("possibleAnswers", clone);
-                  if (draft.correctAnswers === opt) set("correctAnswers", "");
-                }}
-              >
-                Remove
-              </button>
+              {isFaculty && (
+                <button
+                  className="btn btn-outline-danger"
+                  onClick={() => {
+                    const clone = answers.filter((_, idx) => idx !== i);
+                    set("possibleAnswers", clone);
+                    if (draft.correctAnswers === opt) set("correctAnswers", "");
+                  }}
+                >
+                  Remove
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -490,6 +560,7 @@ function QuestionEditor({
               name={`tf_${draft.questionId}`}
               checked={draft.correctAnswers === "True"}
               onChange={() => set("correctAnswers", "True")}
+              disabled={!isFaculty}
             />
             <label className="form-check-label">True</label>
           </div>
@@ -500,6 +571,7 @@ function QuestionEditor({
               name={`tf_${draft.questionId}`}
               checked={draft.correctAnswers === "False"}
               onChange={() => set("correctAnswers", "False")}
+              disabled={!isFaculty}
             />
             <label className="form-check-label">False</label>
           </div>
@@ -513,7 +585,11 @@ function QuestionEditor({
           <textarea
             className="form-control"
             rows={3}
-            value={Array.isArray(draft.possibleAnswers) ? draft.possibleAnswers.join("\n") : ""}
+            value={
+              Array.isArray(draft.possibleAnswers)
+                ? draft.possibleAnswers.join("\n")
+                : ""
+            }
             onChange={(e) =>
               set(
                 "possibleAnswers",
@@ -523,6 +599,7 @@ function QuestionEditor({
                   .filter(Boolean)
               )
             }
+            disabled={!isFaculty}
           />
           <small className="text-muted">Matching is case-insensitive.</small>
         </div>

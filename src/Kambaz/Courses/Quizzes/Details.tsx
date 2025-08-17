@@ -1,13 +1,18 @@
 // src/Kambaz/Courses/Quizzes/Details.tsx
 import { useEffect, useState } from "react";
-import {  useParams, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
+import { useSelector } from "react-redux";        // ← PERMISSIONS: added
 import { getQuiz, setPublish } from "./client";
-//import useNavigate from "react-router-dom";
 
 export default function QuizDetails() {
   const { qid } = useParams();   // quizId from /quizzes/:qid
-  //const navigate = useNavigate();
   const [quiz, setQuiz] = useState<any>(null);
+
+  // PERMISSIONS: read role from redux
+  const { currentUser } = useSelector((s: any) => s.accountReducer || {});
+  const isFaculty = ["FACULTY", "PROFESSOR", "INSTRUCTOR"].includes(
+    (currentUser?.role || "").toUpperCase()
+  );
 
   const load = async () => {
     if (!qid) return;
@@ -22,8 +27,6 @@ export default function QuizDetails() {
   const d = quiz.details || {};
   const dates = d.dates || {};
 
-  
-
   const onTogglePublish = async () => {
     await setPublish(quiz.quizId, !quiz.published);
     await load();
@@ -34,11 +37,21 @@ export default function QuizDetails() {
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2 className="h5 m-0">{d.title || "Untitled Quiz"}</h2>
         <div className="d-flex gap-2">
-          <button className="btn btn-outline-secondary" onClick={onTogglePublish}>
-            {quiz.published ? "Unpublish" : "Publish"}
-          </button>
-          <Link to={`/Kambaz/quizzes/${quiz.quizId}/preview`} className="btn btn-outline-primary">Preview</Link>
-         <Link to={`/Kambaz/quizzes/${quiz.quizId}/edit`} className="btn btn-primary">Edit</Link>
+          {/* Preview is visible to everyone */}
+          <Link to={`/Kambaz/quizzes/${quiz.quizId}/preview`} className="btn btn-outline-primary">
+            Preview
+          </Link>
+          {/* PERMISSIONS: Publish + Edit only for faculty */}
+          {isFaculty && (
+            <>
+              <button className="btn btn-outline-secondary" onClick={onTogglePublish}>
+                {quiz.published ? "Unpublish" : "Publish"}
+              </button>
+              <Link to={`/Kambaz/quizzes/${quiz.quizId}/edit`} className="btn btn-primary">
+                Edit
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
