@@ -1,132 +1,553 @@
-// src/Kambaz/Courses/Quizzes/index.tsx
-import { useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
-import { useSelector } from "react-redux";                 // ← PERMISSIONS: added
+// import {
+//     ListGroup,
+//     Button,
+//     Row,
+//     Col,
+//     Form,
+//     InputGroup,
+//     Modal,
+//     Dropdown,
+// } from "react-bootstrap";
+// import { BsCheckCircle, BsGripVertical, BsXCircle } from "react-icons/bs";
+// import GreenCheckmark from "../Assignments/GreenCheckmark";
+// import { IoEllipsisVertical } from "react-icons/io5";
+// import { FaPlus, FaSearch, FaEdit, FaTrash } from "react-icons/fa";
+// import { Link, useParams, useNavigate } from "react-router-dom";
+// import { useSelector, useDispatch } from "react-redux";
+// import { deleteQuiz, setQuizzes, type Quiz } from "./reducer.ts";
+// import { useEffect, useState } from "react";
+// import * as quizClient from "./client";
+// import { RxRocket } from "react-icons/rx";
+
+// export default function Quizzes() {
+//     const { cid } = useParams();
+//     const navigate = useNavigate();
+//     const dispatch = useDispatch();
+
+//     const allQuizzes = useSelector((state: any) => state.quizzesReducer?.quizzes ?? []);
+//     const quizzes = allQuizzes
+//         .filter((quiz: Quiz) => quiz.course === cid)
+//         .sort((a: Quiz, b: Quiz) => new Date(a.available).getTime() - new Date(b.available).getTime());
+
+//     const { currentUser } = useSelector((state: any) => state.accountReducer);
+//     const isFaculty = currentUser?.role === "FACULTY";
+
+//     const handleAddQuiz = () => {
+//         navigate(`/Kambaz/Courses/${cid}/Quizzes/new`);
+//     };
+
+//     const [showConfirmModal, setShowConfirmModal] = useState(false);
+//     const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
+
+//     const openDeleteConfirmation = (quizId: string) => {
+//         setSelectedQuizId(quizId);
+//         setShowConfirmModal(true);
+//     };
+
+//     const closeDeleteConfirmation = () => {
+//         setSelectedQuizId(null);
+//         setShowConfirmModal(false);
+//     };
+
+//     const togglePublish = async (quiz: Quiz) => {
+//         try {
+//             const updated = await quizClient.updateQuiz(quiz._id, {
+//             ...quiz,
+//             published: !quiz.published,
+//             });
+//             dispatch(setQuizzes(
+//                 quizzes.map((q: Quiz) => (q._id === quiz._id ? updated : q))
+//             ));
+//         } catch (err) {
+//             console.error("Failed to toggle publish status", err);
+//             alert("Failed to update publish status.");
+//         }
+//     };
+
+//     const confirmDelete = async () => {
+//         if (selectedQuizId) {
+//             try {
+//                 const success = await quizClient.deleteQuiz(selectedQuizId);
+//                 if (success) {
+//                     dispatch(deleteQuiz(selectedQuizId));
+//                 } else {
+//                     alert("Failed to delete quiz");
+//                 }
+//             } catch (error) {
+//                 console.error("Delete failed", error);
+//                 alert("An error occurred");
+//             } finally {
+//                 closeDeleteConfirmation();
+//             }
+//         }
+//     };
+
+//     useEffect(() => {
+//         const fetchData = async () => {
+//             try {
+//                 const quizzes = await quizClient.fetchQuizzesForCourse(cid!);
+//                 dispatch(setQuizzes(quizzes));
+//             } catch (error) {
+//                 console.error("Error loading quizzes:", error);
+//             }
+//         };
+//         if (cid) fetchData();
+//     }, [cid, dispatch]);
+
+//     const [searchTerm, setSearchTerm] = useState("");
+//     const filteredQuizzes = quizzes.filter((quiz: Quiz) =>
+//         quiz.title.toLowerCase().includes(searchTerm.toLowerCase())
+//     );
+
+//     return (
+//         <div className="quizzes-wrapper">
+//             <div className="quizzes-content">
+//                 <div className="quizzes-header mb-3">
+//                     <Row className="align-items-center">
+//                         <Col>
+//                             <InputGroup>
+//                                 <InputGroup.Text>
+//                                     <FaSearch />
+//                                 </InputGroup.Text>
+//                                 <Form.Control
+//                                     type="text"
+//                                     placeholder="Search..."
+//                                     value={searchTerm}
+//                                     onChange={(e) => setSearchTerm(e.target.value)}
+//                                 />
+//                             </InputGroup>
+//                         </Col>
+//                         <Col className="d-flex justify-content-end">
+//                             {isFaculty && (
+//                                 <div id="wd-quiz-handling-buttons">
+//                                     <Button variant="danger" onClick={handleAddQuiz}>
+//                                         <FaPlus /> Quiz
+//                                     </Button>
+//                                     <Button variant="secondary" className="ms-2">
+//                                         <IoEllipsisVertical />
+//                                     </Button>
+//                                 </div>
+//                             )}
+//                         </Col>
+//                     </Row>
+//                 </div>
+//             </div>
+
+//             <ListGroup className="rounded-0 modules-list">
+//                 <ListGroup.Item className="module-item p-0 fs-5 border-gray">
+//                     <div className="module-title p-3 ps-2 bg-secondary text-black">
+//                         <BsGripVertical className="me-2 fs-3" /> Quizzes
+//                     </div>
+//                 </ListGroup.Item>
+
+//                 {filteredQuizzes.length === 0 ? (
+//                     <ListGroup.Item className="p-3 text-muted fst-italic">
+//                         No quizzes available. Click the "+ Quiz" button to add one.
+//                     </ListGroup.Item>
+//                 ) : (
+//                     filteredQuizzes.map((quiz: Quiz) => (
+//                         <ListGroup.Item key={quiz._id} className="quiz-item p-3" style={{ borderLeft: '4px solidrgb(0, 128, 0)' }}>
+//                             <div className="d-flex justify-content-between align-items-center w-100">
+//                                 <div className="d-flex align-items-center">
+//                                     <RxRocket className="me-2 fs-3 text-success" />
+//                                     <div>
+//                                         <div className="quiz-header text-black fs-4 mb-1">
+//                                             {isFaculty ? (
+//                                                 <Link
+//                                                     to={`/Kambaz/Courses/${cid}/Quizzes/${quiz._id}/Details`}
+//                                                     className="text-danger text-decoration-none"
+//                                                 >
+//                                                     {quiz.title}
+//                                                 </Link>
+//                                             ) : (
+//                                                 <span className="text-danger">{quiz.title}</span>
+//                                             )}
+//                                         </div>
+//                                         <div className="fs-6 text-muted">
+//                                             {/* <span className="red-font">Multiple Modules</span>
+//                                             <span className="mx-2">|</span> */}
+//                                             <span>
+//                                                 <b>Available</b>{" "}
+//                                                 {new Date(quiz.available).toLocaleString("en-US", {
+//                                                     month: "short",
+//                                                     day: "numeric",
+//                                                     hour: "numeric",
+//                                                     minute: "numeric",
+//                                                     hour12: true,
+//                                                 })}
+//                                             </span>
+//                                             <span className="mx-2">|</span>
+//                                             <span>
+//                                                 <b>Due</b>{" "}
+//                                                 {new Date(quiz.due).toLocaleString("en-US", {
+//                                                     month: "short",
+//                                                     day: "numeric",
+//                                                     hour: "numeric",
+//                                                     minute: "numeric",
+//                                                     hour12: true,
+//                                                 })}
+//                                             </span>
+//                                             <span className="mx-2">|</span>
+//                                             <span>{quiz.points} pts</span>
+//                                         </div>
+//                                     </div>
+//                                 </div>
+
+//                                 {isFaculty && (
+//                                     <div className="d-flex align-items-center">
+//                                         {quiz.published ? (
+//                                             <GreenCheckmark />
+//                                         ) : null}
+//                                         <Dropdown align="end">
+//                                             <Dropdown.Toggle variant="link" className="p-0 ms-2 text-light">
+//                                                 <IoEllipsisVertical className="fs-4 text-dark" />
+//                                             </Dropdown.Toggle>
+//                                             <Dropdown.Menu>
+//                                                 <Dropdown.Item
+//                                                     onClick={() => navigate(`/Kambaz/Courses/${cid}/Quizzes/${quiz._id}`)}
+//                                                 >
+//                                                     <FaEdit className="me-2" />
+//                                                     Edit
+//                                                 </Dropdown.Item>
+//                                                 <Dropdown.Item
+//                                                     onClick={() => openDeleteConfirmation(quiz._id)}
+//                                                 >
+//                                                     <FaTrash className="me-2 text-danger" />
+//                                                     Delete
+//                                                 </Dropdown.Item>
+//                                                 <Dropdown.Item onClick={() => togglePublish(quiz)}>
+//                                                     {quiz.published ? (
+//                                                         <span>
+//                                                             <BsXCircle className="text-danger me-2" title="Unpublish" />Unpublish</span>
+//                                                     ) : (
+//                                                         <span>
+//                                                             <BsCheckCircle className="text-success me-2" title="Publish" />Publish</span>
+//                                                     )}
+//                                                 </Dropdown.Item>
+//                                             </Dropdown.Menu>
+//                                         </Dropdown>
+//                                     </div>
+//                                 )}
+//                             </div>
+//                         </ListGroup.Item>
+//                     ))
+//                 )}
+//             </ListGroup>
+
+//             <Modal show={showConfirmModal} onHide={closeDeleteConfirmation} centered>
+//                 <Modal.Header closeButton>
+//                     <Modal.Title>Confirm Deletion</Modal.Title>
+//                 </Modal.Header>
+//                 <Modal.Body>Are you sure you want to delete this quiz?</Modal.Body>
+//                 <Modal.Footer>
+//                     <Button variant="secondary" onClick={closeDeleteConfirmation}>
+//                         Cancel
+//                     </Button>
+//                     <Button variant="danger" onClick={confirmDelete}>
+//                         Yes, Delete
+//                     </Button>
+//                 </Modal.Footer>
+//             </Modal>
+//         </div>
+//     );
+// }
+
 import {
-  listQuizzesByCourse,
-  createQuiz,
-  deleteQuiz,
-  setPublish,
-} from "./client";
+    ListGroup,
+    Button,
+    Row,
+    Col,
+    Form,
+    InputGroup,
+    Modal,
+    Dropdown,
+} from "react-bootstrap";
+import { BsCheckCircle, BsGripVertical, BsXCircle } from "react-icons/bs";
+import GreenCheckmark from "../Modules/GreenCheckmark";
+import { IoEllipsisVertical } from "react-icons/io5";
+import { FaPlus, FaSearch, FaEdit, FaTrash, FaPlay } from "react-icons/fa";
+import { Link, useParams, useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { deleteQuiz, setQuizzes, type Quiz } from "./reducer.ts";
+import { useEffect, useState } from "react";
+import * as quizClient from "./client";
+import { RxRocket } from "react-icons/rx";
 
-type Quiz = any;
+export default function Quizzes() {
+    const { cid } = useParams();
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
 
-export default function QuizzesList() {
-  const { cid } = useParams();              // course id from URL
-  const navigate = useNavigate();
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [loading, setLoading] = useState(true);
+    const allQuizzes = useSelector((state: any) => state.quizzesReducer?.quizzes ?? []);
+    const quizzes = allQuizzes
+        .filter((quiz: Quiz) => quiz.course === cid)
+        .sort((a: Quiz, b: Quiz) => new Date(a.available).getTime() - new Date(b.available).getTime());
 
-  // PERMISSIONS: read role from redux (no other logic changed)
-  const { currentUser } = useSelector((s: any) => s.accountReducer || {});
-  const isFaculty = ["FACULTY", "PROFESSOR", "INSTRUCTOR"].includes(
-    (currentUser?.role || "").toUpperCase()
-  );
+    const { currentUser } = useSelector((state: any) => state.accountReducer);
+    const isFaculty = currentUser?.role === "FACULTY";
 
-  const load = async () => {
-    if (!cid) return;
-    setLoading(true);
-    const data = await listQuizzesByCourse(cid);
-    // sort by availableFrom (rubric)
-    data.sort((a: any, b: any) => {
-      const ax = a?.details?.dates?.availableFrom
-        ? new Date(a.details.dates.availableFrom).getTime()
-        : 0;
-      const bx = b?.details?.dates?.availableFrom
-        ? new Date(b.details.dates.availableFrom).getTime()
-        : 0;
-      return ax - bx;
-    });
-    setQuizzes(data);
-    setLoading(false);
-  };
+    // Filter quizzes based on user role
+    const displayedQuizzes = isFaculty 
+        ? quizzes 
+        : quizzes.filter((quiz: Quiz) => quiz.published);
 
-  useEffect(() => { load(); }, [cid]);
+    const handleAddQuiz = () => {
+        navigate(`/Kambaz/Courses/${cid}/Quizzes/new`);
+    };
 
-  const onAdd = async () => {
-    if (!cid) return;
-    const q = await createQuiz(cid);
-    // take them to details for now (we’ll add editor next)
-    navigate(`/Kambaz/quizzes/${q.quizId}`);
-  };
+    const handleTakeQuiz = (quizId: string) => {
+        navigate(`/Kambaz/Courses/${cid}/Quizzes/${quizId}/Preview`);
+    };
 
-  const onDelete = async (quizId: string) => {
-    await deleteQuiz(quizId);
-    load();
-  };
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
 
-  const togglePublish = async (q: Quiz) => {
-    await setPublish(q.quizId, !q.published);
-    load();
-  };
+    const openDeleteConfirmation = (quizId: string) => {
+        setSelectedQuizId(quizId);
+        setShowConfirmModal(true);
+    };
 
-  if (loading) return <div>Loading…</div>;
+    const closeDeleteConfirmation = () => {
+        setSelectedQuizId(null);
+        setShowConfirmModal(false);
+    };
 
-  return (
-    <div className="p-3">
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2 className="h5 m-0">Quizzes</h2>
-        {/* PERMISSIONS: + Quiz visible only to faculty */}
-        {isFaculty && (
-          <button className="btn btn-primary" onClick={onAdd}>+ Quiz</button>
-        )}
-      </div>
+    const togglePublish = async (quiz: Quiz) => {
+        try {
+            const updated = await quizClient.updateQuiz(quiz._id, {
+            ...quiz,
+            published: !quiz.published,
+            });
+            dispatch(setQuizzes(
+                quizzes.map((q: Quiz) => (q._id === quiz._id ? updated : q))
+            ));
+        } catch (err) {
+            console.error("Failed to toggle publish status", err);
+            alert("Failed to update publish status.");
+        }
+    };
 
-      {quizzes.length === 0 ? (
-        <div className="text-muted">
-          No quizzes yet.{isFaculty && <> Click <b>+ Quiz</b> to create one.</>}
-        </div>
-      ) : (
-        <ul className="list-group">
-          {quizzes.map((q: any) => {
-            const d = q.details?.dates || {};
-            const now = Date.now();
-            const from = d.availableFrom ? new Date(d.availableFrom).getTime() : null;
-            const until = d.availableUntil ? new Date(d.availableUntil).getTime() : null;
-            let availability = "Not available";
-            if (from && until) {
-              if (now < from) availability = `Not available until ${new Date(from).toLocaleString()}`;
-              else if (now > until) availability = "Closed";
-              else availability = "Available";
+    const confirmDelete = async () => {
+        if (selectedQuizId) {
+            try {
+                const success = await quizClient.deleteQuiz(selectedQuizId);
+                if (success) {
+                    dispatch(deleteQuiz(selectedQuizId));
+                } else {
+                    alert("Failed to delete quiz");
+                }
+            } catch (error) {
+                console.error("Delete failed", error);
+                alert("An error occurred");
+            } finally {
+                closeDeleteConfirmation();
             }
+        }
+    };
 
-            return (
-              <li key={q.quizId} className="list-group-item">
-                <div className="d-flex justify-content-between align-items-start">
-                  <div>
-                    <Link to={`/Kambaz/quizzes/${q.quizId}`} className="fw-semibold">
-                      {q.details?.title || "Untitled Quiz"}
-                    </Link>
-                    <div className="small text-muted">
-                      {availability} · Due {d?.dueDate ? new Date(d.dueDate).toLocaleString() : "—"} ·
-                      Points {q.details?.points ?? 0} ·
-                      Questions {q.questions?.length ?? 0}
-                    </div>
-                  </div>
-                  {/* PERMISSIONS: Publish/Unpublish and Delete only for faculty */}
-                  {isFaculty && (
-                    <div className="d-flex gap-2">
-                      <button
-                        className={`btn btn-sm ${q.published ? "btn-success" : "btn-outline-secondary"}`}
-                        title={q.published ? "Unpublish" : "Publish"}
-                        onClick={() => togglePublish(q)}
-                      >
-                        {q.published ? "✅" : "🚫"}
-                      </button>
-                      <button
-                        className="btn btn-sm btn-outline-danger"
-                        onClick={() => onDelete(q.quizId)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const quizzes = await quizClient.fetchQuizzesForCourse(cid!);
+                dispatch(setQuizzes(quizzes));
+            } catch (error) {
+                console.error("Error loading quizzes:", error);
+            }
+        };
+        if (cid) fetchData();
+    }, [cid, dispatch]);
+
+    const [searchTerm, setSearchTerm] = useState("");
+    const filteredQuizzes = displayedQuizzes.filter((quiz: Quiz) =>
+        quiz.title.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // Check if quiz is available for taking
+    const isQuizAvailable = (quiz: Quiz) => {
+        const now = new Date();
+        const availableDate = new Date(quiz.available);
+        return now >= availableDate;
+    };
+
+    return (
+        <div className="quizzes-wrapper">
+            <div className="quizzes-content">
+                <div className="quizzes-header mb-3">
+                    <Row className="align-items-center">
+                        <Col>
+                            <InputGroup>
+                                <InputGroup.Text>
+                                    <FaSearch />
+                                </InputGroup.Text>
+                                <Form.Control
+                                    type="text"
+                                    placeholder="Search..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </InputGroup>
+                        </Col>
+                        <Col className="d-flex justify-content-end">
+                            {isFaculty && (
+                                <div id="wd-quiz-handling-buttons">
+                                    <Button variant="danger" onClick={handleAddQuiz}>
+                                        <FaPlus /> Quiz
+                                    </Button>
+                                    <Button variant="secondary" className="ms-2">
+                                        <IoEllipsisVertical />
+                                    </Button>
+                                </div>
+                            )}
+                        </Col>
+                    </Row>
                 </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
-  );
+            </div>
+
+            <ListGroup className="rounded-0 modules-list">
+                <ListGroup.Item className="module-item p-0 fs-5 border-gray">
+                    <div className="module-title p-3 ps-2 bg-secondary text-black">
+                        <BsGripVertical className="me-2 fs-3" /> Quizzes
+                    </div>
+                </ListGroup.Item>
+
+                {filteredQuizzes.length === 0 ? (
+                    <ListGroup.Item className="p-3 text-muted fst-italic">
+                        {isFaculty 
+                            ? "No quizzes available. Click the \"+ Quiz\" button to add one."
+                            : "No published quizzes available."
+                        }
+                    </ListGroup.Item>
+                ) : (
+                    filteredQuizzes.map((quiz: Quiz) => (
+                        <ListGroup.Item key={quiz._id} className="quiz-item p-3" style={{ borderLeft: '4px solid rgb(0, 128, 0)' }}>
+                            <div className="d-flex justify-content-between align-items-center w-100">
+                                <div className="d-flex align-items-center flex-grow-1">
+                                    <RxRocket className="me-2 fs-3 text-success" />
+                                    <div className="flex-grow-1">
+                                        <div className="quiz-header text-black fs-4 mb-1">
+                                            {isFaculty ? (
+                                                <Link
+                                                    to={`/Kambaz/Courses/${cid}/Quizzes/${quiz._id}/Details`}
+                                                    className="text-danger text-decoration-none"
+                                                >
+                                                    {quiz.title}
+                                                </Link>
+                                            ) : (
+                                                <span className="text-danger">{quiz.title}</span>
+                                            )}
+                                        </div>
+                                        <div className="fs-6 text-muted">
+                                            <span>
+                                                <b>Available</b>{" "}
+                                                {new Date(quiz.available).toLocaleString("en-US", {
+                                                    month: "short",
+                                                    day: "numeric",
+                                                    hour: "numeric",
+                                                    minute: "numeric",
+                                                    hour12: true,
+                                                })}
+                                            </span>
+                                            <span className="mx-2">|</span>
+                                            <span>
+                                                <b>Due</b>{" "}
+                                                {new Date(quiz.due).toLocaleString("en-US", {
+                                                    month: "short",
+                                                    day: "numeric",
+                                                    hour: "numeric",
+                                                    minute: "numeric",
+                                                    hour12: true,
+                                                })}
+                                            </span>
+                                            <span className="mx-2">|</span>
+                                            <span>{quiz.points} pts</span>
+                                            {!isFaculty && !isQuizAvailable(quiz) && (
+                                                <>
+                                                    <span className="mx-2">|</span>
+                                                    <span className="text-warning">
+                                                        <b>Not Yet Available</b>
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="d-flex align-items-center">
+                                    {/* Student Take Quiz Button */}
+                                    {!isFaculty && isQuizAvailable(quiz) && (
+                                        <Button
+                                            variant="outline-danger"
+                                            size="sm"
+                                            className="me-2"
+                                            onClick={() => handleTakeQuiz(quiz._id)}
+                                        >
+                                            <FaPlay className="me-1" />
+                                            Take Quiz
+                                        </Button>
+                                    )}
+
+                                    {isFaculty && (
+                                        <>
+                                            {quiz.published ? (
+                                                <GreenCheckmark />
+                                            ) : null}
+                                            <Dropdown align="end">
+                                                <Dropdown.Toggle variant="link" className="p-0 ms-2 text-light">
+                                                    <IoEllipsisVertical className="fs-4 text-dark" />
+                                                </Dropdown.Toggle>
+                                                <Dropdown.Menu>
+                                                    <Dropdown.Item
+                                                        onClick={() => navigate(`/Kambaz/Courses/${cid}/Quizzes/${quiz._id}`)}
+                                                    >
+                                                        <FaEdit className="me-2" />
+                                                        Edit
+                                                    </Dropdown.Item>
+                                                    <Dropdown.Item
+                                                        onClick={() => handleTakeQuiz(quiz._id)}
+                                                    >
+                                                        <FaPlay className="me-2" />
+                                                        Preview
+                                                    </Dropdown.Item>
+                                                    <Dropdown.Item
+                                                        onClick={() => openDeleteConfirmation(quiz._id)}
+                                                    >
+                                                        <FaTrash className="me-2 text-danger" />
+                                                        Delete
+                                                    </Dropdown.Item>
+                                                    <Dropdown.Item onClick={() => togglePublish(quiz)}>
+                                                        {quiz.published ? (
+                                                            <span>
+                                                                <BsXCircle className="text-danger me-2" title="Unpublish" />Unpublish</span>
+                                                        ) : (
+                                                            <span>
+                                                                <BsCheckCircle className="text-success me-2" title="Publish" />Publish</span>
+                                                        )}
+                                                    </Dropdown.Item>
+                                                </Dropdown.Menu>
+                                            </Dropdown>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </ListGroup.Item>
+                    ))
+                )}
+            </ListGroup>
+
+            <Modal show={showConfirmModal} onHide={closeDeleteConfirmation} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Confirm Deletion</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>Are you sure you want to delete this quiz?</Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={closeDeleteConfirmation}>
+                        Cancel
+                    </Button>
+                    <Button variant="danger" onClick={confirmDelete}>
+                        Yes, Delete
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+        </div>
+    );
 }

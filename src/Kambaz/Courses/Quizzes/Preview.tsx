@@ -1,152 +1,475 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { getQuiz } from "./client";
+import { useState, useEffect } from 'react';
+import { 
+    Container, 
+    Card, 
+    Button, 
+    Form, 
+    Row, 
+    Col, 
+    Alert, 
+    Badge,
+    ListGroup,
+    Modal
+} from 'react-bootstrap';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
+import * as questionClient from './Questions/client';
+import * as quizClient from './client';
+import { IoCheckmark } from 'react-icons/io5';
+
+interface PreviewAnswer {
+    questionId: string;
+    answer: string;
+    isCorrect?: boolean;
+}
+
+interface Question {
+    _id: string;
+    questionType: string;
+    title: string;
+    question: string;
+    points: number;
+    correctAnswer: string;
+    published: boolean; // Add published field
+    options?: Array<{
+        text: string;
+        isCorrect?: boolean;
+    }>;
+    possibleAnswers?: string[];
+}
+
+interface Quiz {
+    _id: string;
+    title: string;
+    description: string;
+    points: number;
+    timeLimit: number;
+    instructions?: string;
+}
 
 export default function QuizPreview() {
-  const { qid } = useParams();
-  const [quiz, setQuiz] = useState<any | null>(null);
-  const [idx, setIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [submitted, setSubmitted] = useState(false);
-  const [score, setScore] = useState(0);
+    const { cid, qid } = useParams();
+    const navigate = useNavigate();
+    
+    const [quiz, setQuiz] = useState<Quiz | null>(null);
+    const [questions, setQuestions] = useState<Question[]>([]);
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [answers, setAnswers] = useState<Record<string, string>>({});
+    const [showResults, setShowResults] = useState(false);
+    const [score, setScore] = useState(0);
+    const [gradedAnswers, setGradedAnswers] = useState<PreviewAnswer[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [showSubmitModal, setShowSubmitModal] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      if (!qid) return;
-      const data = await getQuiz(qid);
-      setQuiz(data);
-      setIdx(0);
-      setAnswers({});
-      setSubmitted(false);
-      setScore(0);
+    const { currentUser } = useSelector((state: any) => state.accountReducer);
+    const isFaculty = currentUser?.role === "FACULTY";
+
+    useEffect(() => {
+        loadQuizData();
+    }, [cid, qid]);
+
+    const loadQuizData = async () => {
+        if (!cid || !qid) return;
+        
+        try {
+            setLoading(true);
+            
+            // Load quiz details
+            const quizData = await quizClient.fetchQuizById(qid);
+            setQuiz(quizData);
+            
+            // Load questions and filter for published only
+            const allQuestions = await questionClient.fetchQuestionsForQuiz(cid, qid);
+            const publishedQuestions = allQuestions.filter((q: Question) => q.published === true);
+            setQuestions(publishedQuestions);
+            
+            // Initialize answers object for published questions only
+            const initialAnswers: Record<string, string> = {};
+            publishedQuestions.forEach((q: Question) => {
+                initialAnswers[q._id] = '';
+            });
+            setAnswers(initialAnswers);
+            
+        } catch (error) {
+            console.error('Error loading quiz data:', error);
+        } finally {
+            setLoading(false);
+        }
     };
-    load();
-  }, [qid]);
 
-  if (!quiz) return <div className="p-3">Loading…</div>;
+    const handleAnswerChange = (questionId: string, answer: string) => {
+        setAnswers(prev => ({
+            ...prev,
+            [questionId]: answer
+        }));
+    };
 
-  const qs = quiz.questions || [];
-  const q = qs[idx];
+    const gradeQuiz = () => {
+        const gradedResults: PreviewAnswer[] = [];
+        let totalScore = 0;
+        let maxScore = 0;
 
-  const setAnswer = (qid: string, val: string) =>
-    setAnswers({ ...answers, [qid]: val });
+        questions.forEach((question) => {
+            maxScore += question.points;
+            const userAnswer = answers[question._id] || '';
+            let isCorrect = false;
 
-  const onSubmit = () => {
-    // simple local scoring
-    let s = 0;
-    qs.forEach((qq: any) => {
-      const given = (answers[qq.questionId] || "").trim();
-      if (qq.questionType === "fill-in-blank") {
-        const accepted: string[] = (qq.possibleAnswers || []).map((a: string) => a.toLowerCase());
-        if (accepted.includes(given.toLowerCase())) s += qq.points || 0;
-      } else {
-        const correct = (qq.correctAnswers || "").trim();
-        if (given === correct) s += qq.points || 0;
-      }
-    });
-    setScore(s);
-    setSubmitted(true);
-  };
+            // Grade based on question type
+            switch (question.questionType) {
+                case 'Multiple Choice':
+                case 'True False':
+                    isCorrect = userAnswer.toLowerCase() === question.correctAnswer.toLowerCase();
+                    break;
+                case 'Fill in the Blank':
+                    // Check against all possible answers if available
+                    if (question.options && question.options.length > 0) {
+                        isCorrect = question.options.some(option => 
+                            option.text.toLowerCase().trim() === userAnswer.toLowerCase().trim()
+                        );
+                    } else {
+                        isCorrect = userAnswer.toLowerCase().trim() === question.correctAnswer.toLowerCase().trim();
+                    }
+                    break;
+                default:
+                    isCorrect = userAnswer.toLowerCase() === question.correctAnswer.toLowerCase();
+            }
 
-  return (
-    <div className="p-3">
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2 className="h5 m-0">Preview: {quiz.details?.title || "Untitled Quiz"}</h2>
-        <Link to={`/Kambaz/quizzes/${quiz.quizId}`} className="btn btn-secondary">Exit Preview</Link>
-      </div>
+            if (isCorrect) {
+                totalScore += question.points;
+            }
 
-      {!submitted ? (
-        <>
-          <div className="card p-3 mb-3">
-            <div className="fw-semibold mb-1">{q?.questionTitle}</div>
-            <div className="mb-2">{q?.questionDescription}</div>
+            gradedResults.push({
+                questionId: question._id,
+                answer: userAnswer,
+                isCorrect
+            });
+        });
 
-            {q?.questionType === "multiple-choice" && (
-              <div>
-                {(q.possibleAnswers || []).map((opt: string, i: number) => (
-                  <div className="form-check" key={i}>
-                    <input
-                      className="form-check-input"
-                      type="radio"
-                      name={q.questionId}
-                      checked={(answers[q.questionId] || "") === opt}
-                      onChange={() => setAnswer(q.questionId, opt)}
-                    />
-                    <label className="form-check-label">{opt}</label>
-                  </div>
-                ))}
-              </div>
-            )}
+        setScore(Math.round((totalScore / maxScore) * 100));
+        setGradedAnswers(gradedResults);
+        setShowResults(true);
+    };
 
-            {q?.questionType === "true-false" && (
-              <div>
-                {["True", "False"].map((opt) => (
-                  <div className="form-check" key={opt}>
-                    <input
-                      className="form-check-input"
-                      type="radio"
-                      name={q.questionId}
-                      checked={(answers[q.questionId] || "") === opt}
-                      onChange={() => setAnswer(q.questionId, opt)}
-                    />
-                    <label className="form-check-label">{opt}</label>
-                  </div>
-                ))}
-              </div>
-            )}
+    const handleSubmitQuiz = () => {
+        setShowSubmitModal(true);
+    };
 
-            {q?.questionType === "fill-in-blank" && (
-              <input
-                className="form-control"
-                placeholder="Your answer"
-                value={answers[q.questionId] || ""}
-                onChange={(e) => setAnswer(q.questionId, e.target.value)}
-              />
-            )}
-          </div>
+    const confirmSubmit = () => {
+        setShowSubmitModal(false);
+        gradeQuiz();
+    };
 
-          <div className="d-flex justify-content-between">
-            <button className="btn btn-outline-secondary"
-                    disabled={idx === 0}
-                    onClick={() => setIdx((n) => Math.max(0, n - 1))}>
-              ← Previous
-            </button>
-            {idx < qs.length - 1 ? (
-              <button className="btn btn-primary"
-                      onClick={() => setIdx((n) => Math.min(qs.length - 1, n + 1))}>
-                Next →
-              </button>
-            ) : (
-              <button className="btn btn-success" onClick={onSubmit}>
-                Submit
-              </button>
-            )}
-          </div>
-        </>
-      ) : (
-        <div className="card p-3">
-          <h3 className="h6">Your Score: {score} / {quiz.details?.points ?? 0}</h3>
-          <hr />
-          {qs.map((qq: any) => {
-            const given = answers[qq.questionId] || "";
-            const correct = qq.correctAnswers;
-            const isCorrect =
-              qq.questionType === "fill-in-blank"
-                ? (qq.possibleAnswers || []).map((s: string) => s.toLowerCase()).includes((given || "").toLowerCase())
-                : given === (correct || "");
-            return (
-              <div key={qq.questionId} className="mb-2">
-                <div className="fw-semibold">{qq.questionTitle}</div>
-                <div className={isCorrect ? "text-success" : "text-danger"}>
-                  {isCorrect ? "✔ Correct" : "✘ Incorrect"}
+    const resetQuiz = () => {
+        const resetAnswers: Record<string, string> = {};
+        questions.forEach((q) => {
+            resetAnswers[q._id] = '';
+        });
+        setAnswers(resetAnswers);
+        setShowResults(false);
+        setCurrentQuestionIndex(0);
+        setScore(0);
+        setGradedAnswers([]);
+    };
+
+    const renderQuestion = (question: Question, index: number) => {
+        const userAnswer = answers[question._id] || '';
+        const gradedAnswer = gradedAnswers.find(ga => ga.questionId === question._id);
+        const isReviewMode = showResults;
+
+        return (
+            <Card className="mb-4">
+                <Card.Header className="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 className="mb-0">Question {index + 1}</h5>
+                        <h6 className="mb-0">{question.title}</h6>
+                        <small className="text-muted">{question.points} point{question.points !== 1 ? 's' : ''}</small>
+                    </div>
+                    {isReviewMode && (
+                        <Badge bg={gradedAnswer?.isCorrect ? 'success' : 'danger'}>
+                            {gradedAnswer?.isCorrect ? <FaCheck /> : <FaTimes />}
+                            {gradedAnswer?.isCorrect ? ' Correct' : ' Incorrect'}
+                        </Badge>
+                    )}
+                </Card.Header>
+                <Card.Body>
+                    <div className="mb-3">
+                        <div dangerouslySetInnerHTML={{ __html: question.question }} />
+                    </div>
+
+                    {question.questionType === 'Multiple Choice' && (
+                        <div>
+                            {question.options?.map((option, optIndex) => (
+                                <Form.Check
+                                    key={optIndex}
+                                    type="radio"
+                                    name={`question-${question._id}`}
+                                    id={`question-${question._id}-option-${optIndex}`}
+                                    label={option.text}
+                                    value={option.text}
+                                    checked={userAnswer === option.text}
+                                    onChange={(e) => handleAnswerChange(question._id, e.target.value)}
+                                    disabled={isReviewMode}
+                                    className={isReviewMode ? 
+                                        (option.text === question.correctAnswer ? 'text-success fw-bold' : 
+                                         userAnswer === option.text && !gradedAnswer?.isCorrect ? 'text-danger' : '') 
+                                        : ''}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    {question.questionType === 'True False' && (
+                        <div>
+                            <Form.Check
+                                type="radio"
+                                name={`question-${question._id}`}
+                                id={`question-${question._id}-true`}
+                                label="True"
+                                value="True"
+                                checked={userAnswer === 'True'}
+                                onChange={(e) => handleAnswerChange(question._id, e.target.value)}
+                                disabled={isReviewMode}
+                                className={isReviewMode ? 
+                                    (question.correctAnswer === 'True' ? 'text-success fw-bold' : 
+                                     userAnswer === 'True' && !gradedAnswer?.isCorrect ? 'text-danger' : '') 
+                                    : ''}
+                            />
+                            <Form.Check
+                                type="radio"
+                                name={`question-${question._id}`}
+                                id={`question-${question._id}-false`}
+                                label="False"
+                                value="False"
+                                checked={userAnswer === 'False'}
+                                onChange={(e) => handleAnswerChange(question._id, e.target.value)}
+                                disabled={isReviewMode}
+                                className={isReviewMode ? 
+                                    (question.correctAnswer === 'False' ? 'text-success fw-bold' : 
+                                     userAnswer === 'False' && !gradedAnswer?.isCorrect ? 'text-danger' : '') 
+                                    : ''}
+                            />
+                        </div>
+                    )}
+
+                    {question.questionType === 'Fill in the Blank' && (
+                        <div>
+                            <Form.Control
+                                type="text"
+                                placeholder="Enter your answer"
+                                value={userAnswer}
+                                onChange={(e) => handleAnswerChange(question._id, e.target.value)}
+                                disabled={isReviewMode}
+                            />
+                            {isReviewMode && (
+                                <div className="mt-2">
+                                    <small className="text-success">
+                                        <strong>Correct answer(s): </strong>
+                                        {question.options?.map(opt => opt.text).join(', ') || question.correctAnswer}
+                                    </small>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </Card.Body>
+            </Card>
+        );
+    };
+
+    if (loading) {
+        return (
+            <Container className="mt-4">
+                <div className="text-center">
+                    <div className="spinner-border" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                    </div>
                 </div>
-                {!isCorrect && <div className="small text-muted">Your answer: {given || "—"}</div>}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+            </Container>
+        );
+    }
+
+    if (!quiz || questions.length === 0) {
+        return (
+            <Container className="mt-4">
+                <Alert variant="warning">
+                    <h5>No Published Questions Available</h5>
+                    <p>This quiz has no published questions to preview.</p>
+                    {isFaculty && (
+                        <div className="mt-3">
+                            <Button
+                                variant="primary"
+                                onClick={() => navigate(`/Kambaz/Courses/${cid}/Quizzes/${qid}/Questions`)}
+                            >
+                                <FaEdit className="me-1" />
+                                Go to Questions Editor
+                            </Button>
+                        </div>
+                    )}
+                </Alert>
+            </Container>
+        );
+    }
+
+    const currentQuestion = questions[currentQuestionIndex];
+
+    return (
+        <Container className="mt-4">
+            {/* Header */}
+            <Row className="mb-4">
+                <Col>
+                    <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2>{quiz.title} {showResults ? '- Results' : '- Preview'}</h2>
+                            {!showResults && (
+                                <p className="text-muted mb-0">
+                                    Faculty Preview Mode • {questions.length} Published Questions • {quiz.points} Points
+                                    {quiz.timeLimit && ` • ${quiz.timeLimit} Minutes`}
+                                </p>
+                            )}
+                        </div>
+                        <div>
+                            {isFaculty && (
+                                <Button
+                                    variant="danger"
+                                    onClick={() => navigate(`/Kambaz/Courses/${cid}/Quizzes/${qid}/Questions`)}
+                                    className="me-2"
+                                >
+                                    <FaEdit className="me-1" />
+                                    Edit Quiz
+                                </Button>
+                            )}
+                            {showResults && (
+                                <Button variant="secondary" onClick={resetQuiz}>
+                                    Retake Preview
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </Col>
+            </Row>
+
+            {showResults ? (
+                /* Results View */
+                <div>
+                    <Alert variant="info" className="mb-4">
+                        <h4>Quiz Complete!</h4>
+                        <p className="mb-1">Your Score: <strong>{score}%</strong></p>
+                        <p className="mb-0">
+                            {gradedAnswers.filter(ga => ga.isCorrect).length} out of {questions.length} questions correct
+                        </p>
+                    </Alert>
+
+                    <h4>Review Your Answers:</h4>
+                    {questions.map((question, index) => renderQuestion(question, index))}
+                </div>
+            ) : (
+                /* Quiz Taking View */
+                <Row>
+                    <Col md={8}>
+                        {/* Current Question */}
+                        {renderQuestion(currentQuestion, currentQuestionIndex)}
+
+                        {/* Navigation Buttons */}
+                        <div className="d-flex justify-content-between">
+                            <Button
+                                variant="secondary"
+                                onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+                                disabled={currentQuestionIndex === 0}
+                            >
+                                &lt; Previous
+                            </Button>
+                            
+                            <div>
+                                {currentQuestionIndex < questions.length - 1 ? (
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
+                                    >
+                                        Next &gt;
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="success"
+                                        onClick={handleSubmitQuiz}
+                                    >
+                                        Submit Quiz
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    </Col>
+
+                    <Col md={4}>
+                        {/* Question Navigation Sidebar */}
+                        <Card>
+                            <Card.Header>
+                                <h6 className="mb-0">Questions</h6>
+                            </Card.Header>
+                            <Card.Body className="p-2">
+                                <ListGroup variant="flush">
+                                    {questions.map((question, index) => (
+                                        <ListGroup.Item
+                                            key={question._id}
+                                            action
+                                            active={index === currentQuestionIndex}
+                                            onClick={() => setCurrentQuestionIndex(index)}
+                                            className={`d-flex justify-content-between align-items-center py-2 ${
+                                                index === currentQuestionIndex ? 'bg-secondary text-danger' : 'text-danger'
+                                            }`} >
+                                            <span className='text-danger'>Question {index + 1}</span>
+                                            <div>
+                                                {answers[question._id] && (
+                                                    <Badge bg="success"><IoCheckmark /></Badge>
+                                                )}
+                                                <small className="text-muted ms-2">{question.points}pts</small>
+                                            </div>
+                                        </ListGroup.Item>
+                                    ))}
+                                </ListGroup>
+                            </Card.Body>
+                        </Card>
+
+                        {/* Progress */}
+                        <Card className="mt-3">
+                            <Card.Body>
+                                <h6>Progress</h6>
+                                <p className="mb-1">
+                                    {Object.values(answers).filter(a => a.trim() !== '').length} of {questions.length} answered
+                                </p>
+                                <div className="progress">
+                                    <div
+                                        className="progress-bar bg-danger"
+                                        style={{
+                                            width: `${(Object.values(answers).filter(a => a.trim() !== '').length / questions.length) * 100}%`,
+                                        }}
+                                    />
+                                </div>
+                            </Card.Body>
+                        </Card>
+                    </Col>
+                </Row>
+            )}
+
+            {/* Submit Confirmation Modal */}
+            <Modal show={showSubmitModal} onHide={() => setShowSubmitModal(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Submit Quiz Preview</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <p>Are you sure you want to submit this quiz preview?</p>
+                    <p className="text-muted">
+                        You have answered {Object.values(answers).filter(a => a.trim() !== '').length} out of {questions.length} questions.
+                    </p>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowSubmitModal(false)}>
+                        Continue Editing
+                    </Button>
+                    <Button variant="success" onClick={confirmSubmit}>
+                        Submit Preview
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+        </Container>
+    );
 }

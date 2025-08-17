@@ -11,6 +11,11 @@ import {useLocation, useParams} from "react-router-dom";
 import * as courseClient from "./client.ts";
 import {useEffect, useState} from "react";
 import Quizzes from "./Quizzes/index.tsx";
+import QuizzesEditor from "./Quizzes/Editor";
+import Details from "./Quizzes/Details";
+import Questions from "./Quizzes/Questions/index";
+import QuestionEditor from "./Quizzes/Questions/Editor";
+import Preview from "./Quizzes/Preview";
 
 
 export default function Courses({ courses }: { courses: any[]; }) {
@@ -43,7 +48,12 @@ export default function Courses({ courses }: { courses: any[]; }) {
                             <Route path="Assignments/:aid" element={<AssignmentEditor />} />
                             <Route path="Assignments/create" element={<AssignmentEditor />} />
                             <Route path="Zoom" element={<h1>Zoom</h1>} />
-                             <Route path="Quizzes" element={<Quizzes />} /> 
+                              <Route path="Quizzes" element={<Quizzes />} />
+                        <Route path="Quizzes/:qid" element={<QuizzesEditor />} />
+                        <Route path="Quizzes/:qid/Details" element={<Details />} />
+                        <Route path="Quizzes/:qid/Preview" element={<Preview />} />
+                        <Route path="Quizzes/:qid/Questions" element={<Questions />} />
+                        <Route path="Quizzes/:qid/Questions/:questid" element={<QuestionEditor />} /> 
                             <Route path="Piazza" element={<h1>Piazza</h1>} />
                             <Route path="People" element={<PeopleTable users={enrolledUsers} />} />
                         </Routes>

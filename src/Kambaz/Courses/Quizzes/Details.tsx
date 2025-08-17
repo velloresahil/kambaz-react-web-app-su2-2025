@@ -1,83 +1,134 @@
-// src/Kambaz/Courses/Quizzes/Details.tsx
+import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { useSelector } from "react-redux";        // ← PERMISSIONS: added
-import { getQuiz, setPublish } from "./client";
+import * as quizClient from "./client";
+import { Button, Card, Spinner } from "react-bootstrap";
+import type { Quiz } from "./reducer";   
+import { FaPencil } from "react-icons/fa6";
+import { useDispatch } from "react-redux";
+import { updateQuiz } from "./reducer";
 
-export default function QuizDetails() {
-  const { qid } = useParams();   // quizId from /quizzes/:qid
-  const [quiz, setQuiz] = useState<any>(null);
+export default function Details() {
+    const { cid, qid } = useParams();
+    const [quiz, setQuiz] = useState<Quiz | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [updating, setUpdating] = useState(false);
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+    
+    const editor = `/Kambaz/Courses/${cid}/Quizzes/${qid}`
+    const preview = `/Kambaz/Courses/${cid}/Quizzes/${qid}/Preview`;
+    
+    useEffect(() => {
+        const loadQuiz = async () => {
+        try {
+            const quizzes = await quizClient.fetchQuizzesForCourse(cid!);
+            const found = quizzes.find((q: Quiz) => q._id === qid);
+            setQuiz(found || null);
+        } catch (err) {
+            console.error("Failed to fetch quizzes:", err);
+            setQuiz(null);
+        } finally {
+            setLoading(false);
+        }
+        };
+        loadQuiz();
+    }, [cid, qid]);
 
-  // PERMISSIONS: read role from redux
-  const { currentUser } = useSelector((s: any) => s.accountReducer || {});
-  const isFaculty = ["FACULTY", "PROFESSOR", "INSTRUCTOR"].includes(
-    (currentUser?.role || "").toUpperCase()
-  );
+    const handlePublishToggle = async () => {
+        if (!quiz) return;
+        
+        setUpdating(true);
+        try {
+            const updatedQuiz = await quizClient.updateQuiz(quiz._id, {
+                ...quiz,
+                published: !quiz.published
+            });
+            setQuiz(updatedQuiz);
+            dispatch(updateQuiz(updatedQuiz));
+        } catch (err) {
+            console.error("Failed to update quiz publish status:", err);
+            alert("Failed to update quiz publish status.");
+        } finally {
+            setUpdating(false);
+        }
+    };
 
-  const load = async () => {
-    if (!qid) return;
-    const data = await getQuiz(qid);
-    setQuiz(data);
-  };
+    if (loading) return <Spinner animation="border" />;
+    if (!quiz) return <div>Quiz not found.</div>;
 
-  useEffect(() => { load(); }, [qid]);
-
-  if (!quiz) return <div className="p-3">Loading…</div>;
-
-  const d = quiz.details || {};
-  const dates = d.dates || {};
-
-  const onTogglePublish = async () => {
-    await setPublish(quiz.quizId, !quiz.published);
-    await load();
-  };
-
-  return (
-    <div className="p-3">
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2 className="h5 m-0">{d.title || "Untitled Quiz"}</h2>
-        <div className="d-flex gap-2">
-          {/* Preview is visible to everyone */}
-          <Link to={`/Kambaz/quizzes/${quiz.quizId}/preview`} className="btn btn-outline-primary">
-            Preview
-          </Link>
-          {/* PERMISSIONS: Publish + Edit only for faculty */}
-          {isFaculty && (
-            <>
-              <button className="btn btn-outline-secondary" onClick={onTogglePublish}>
-                {quiz.published ? "Unpublish" : "Publish"}
-              </button>
-              <Link to={`/Kambaz/quizzes/${quiz.quizId}/edit`} className="btn btn-primary">
-                Edit
-              </Link>
-            </>
-          )}
+    return (
+        <div>
+            <div className="d-flex justify-content-center my-3">
+                <Button
+                    className="me-2"
+                    variant="secondary"
+                    onClick={() => navigate(preview)}
+                >
+                    Preview
+                </Button>
+                <Button
+                    className="me-2"
+                    variant="secondary"
+                    onClick={() => navigate(editor)}
+                >
+                    <FaPencil className="me-2" />
+                    Edit Quiz
+                </Button>
+            </div>
+            <hr />
+            <div className="container mt-4">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h2>{quiz.title}</h2>
+                    <span className={`badge ${quiz.published ? 'bg-success' : 'bg-secondary'}`}>
+                        {quiz.published ? 'Published' : 'Unpublished'}
+                    </span>
+                </div>
+                <Card className="mt-3 justify-content-center align-items-center">
+                    <Card.Body>
+                        <p><strong>Quiz Type:</strong> {quiz.quizType}</p>
+                        <p><strong>Points:</strong> {quiz.points}</p>
+                        <p><strong>Assignment Group:</strong> {quiz.assignmentGroup}</p>
+                        <p><strong>Time Limit:</strong> {quiz.timeLimit} minutes</p>
+                        <p><strong>Multiple Attempts:</strong> {quiz.multipleAttempts ? "Yes" : "No"}</p>
+                        <p><strong>Show Correct Answers:</strong> {quiz.showCorrectAnswers ? "Immediately" : "After Due Date"}</p>
+                        <p><strong>Shuffle Answers:</strong> {quiz.shuffleAnswers ? "Yes" : "No"}</p>
+                        <p><strong>One Question at a Time:</strong> {quiz.oneQuestionAtATime ? "Yes" : "No"}</p>
+                        <p><strong>Webcam Required:</strong> {quiz.webcamRequired ? "Yes" : "No"}</p>
+                        <p><strong>Lock Questions After Answering:</strong> {quiz.lockQuestionsAfterAnswering ? "Yes" : "No"}</p>
+                        <p><strong>Access Code:</strong> {quiz.accessCode || "(None)"}</p>
+                        <p><strong>Description:</strong> {quiz.description}</p>
+                    </Card.Body>
+                    <table className="table">
+                        <thead>
+                            <tr>
+                                <th>Due</th>
+                                <th>For</th>
+                                <th>Available</th>
+                                <th>Until</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                                <tr key={quiz._id}>
+                                    <td>{quiz.due}</td>
+                                    <td>{quiz.assignTo}</td>
+                                    <td>{quiz.available}</td>
+                                    <td>{quiz.until}</td>
+                                </tr>
+                        </tbody>
+                    </table>
+                </Card>
+                <Button
+                    variant={quiz.published ? "danger" : "success"}
+                    onClick={handlePublishToggle}
+                    disabled={updating}
+                    className="mb-2 mt-2 dflex float-end"
+                >
+                    {updating ? (
+                        <Spinner animation="border" size="sm" className="me-2 ms-2" />
+                    ) : null}
+                    {quiz.published ? "Unpublish" : "Publish"}
+                </Button>
+            </div>
         </div>
-      </div>
-
-      <div className="card p-3">
-        <div className="row">
-          <div className="col-6 small">
-            <div><b>Quiz Type:</b> {d.quizType}</div>
-            <div><b>Points:</b> {d.points ?? 0}</div>
-            <div><b>Assignment Group:</b> {d.assignmentGroup}</div>
-            <div><b>Shuffle Answers:</b> {d.shuffleAnswers ? "Yes" : "No"}</div>
-            <div><b>Time Limit:</b> {d.timeLimit} Minutes</div>
-            <div><b>Multiple Attempts:</b> {d.multipleAttempts ? "Yes" : "No"}</div>
-            {d.multipleAttempts && <div><b>How Many Attempts:</b> {d.maxAttempts}</div>}
-            <div><b>Show Correct Answers:</b> {d.showCorrectAnswers ? "Yes" : "No"}</div>
-            <div><b>Access Code:</b> {d.accessCode || "—"}</div>
-          </div>
-          <div className="col-6 small">
-            <div><b>One Question at a Time:</b> {d.oneQuestionAtATime ? "Yes" : "No"}</div>
-            <div><b>Webcam Required:</b> {d.webcamRequired ? "Yes" : "No"}</div>
-            <div><b>Lock After Answering:</b> {d.lockAfterAnswering ? "Yes" : "No"}</div>
-            <div><b>Due date:</b> {dates?.dueDate ? new Date(dates.dueDate).toLocaleString() : "—"}</div>
-            <div><b>Available from:</b> {dates?.availableFrom ? new Date(dates.availableFrom).toLocaleString() : "—"}</div>
-            <div><b>Until:</b> {dates?.availableUntil ? new Date(dates.availableUntil).toLocaleString() : "—"}</div>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
