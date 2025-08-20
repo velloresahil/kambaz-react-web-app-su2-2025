@@ -1,11 +1,11 @@
 import axios from "axios";
 const axiosWithCredentials = axios.create({ withCredentials: true });
-//Update
+
 
 const REMOTE_SERVER = import.meta.env.VITE_REMOTE_SERVER;
 const COURSES_API = `${REMOTE_SERVER}/api/courses`;
 const QUIZZES_API = `${REMOTE_SERVER}/api/quizzes`;
-// const QUESTIONS_API = `${REMOTE_SERVER}/api/questions`;
+
 
 export interface Question {
   _id?: string;
@@ -37,10 +37,7 @@ export const fetchQuestionById = async (qid: string, questid: string) => {
   return response.data;
 };
 
-// export const createQuestion = async (questid: string, question: any) => {
-//   const response = await axiosWithCredentials.post(`${QUIZZES_API}/${questid}/questions`, question);
-//   return response.data;
-// };
+
 
 export const createQuestion = async (cid: string, qid: string, question: any) => {
   const response = await axiosWithCredentials.post(`${COURSES_API}/${cid}/quizzes/${qid}/questions`, question);

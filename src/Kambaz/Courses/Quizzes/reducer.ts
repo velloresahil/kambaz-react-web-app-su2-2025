@@ -1,18 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 
-// export interface Quiz {
-//   _id: string;
-//   title: string;
-//   course: string;
-//   description: string;
-//   points: number;
-//   due: string;
-//   available: string;
-//   assignTo: string;
-//   displayGrade: string;
-// }
-
 export type Quiz = {
   _id: string;
   title: string;
@@ -29,6 +17,7 @@ export type Quiz = {
   shuffleAnswers?: boolean;
   timeLimit?: number;
   multipleAttempts?: boolean;
+  maxAttempts?: number;               // <-- NEW
   showCorrectAnswers?: string;
   accessCode?: string;
   oneQuestionAtATime?: boolean;

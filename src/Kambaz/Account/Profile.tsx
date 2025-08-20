@@ -50,7 +50,7 @@ export default function Profile() {
                         <option value="STUDENT">Student</option>
                     </select>
                     <button onClick={updateProfile} className="btn btn-primary w-100 mb-2"> Update</button>
-                    <Button onClick={signout} className="w-100 mb-2" id="wd-signout-btn">
+                    <Button variant = "danger" onClick={signout} className="w-100 mb-2" id="wd-signout-btn">
                         Sign out
                     </Button>
                 </div>

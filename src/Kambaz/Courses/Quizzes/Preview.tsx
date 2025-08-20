@@ -31,7 +31,7 @@ interface Question {
     question: string;
     points: number;
     correctAnswer: string;
-    published: boolean; // Add published field
+    published: boolean;
     options?: Array<{
         text: string;
         isCorrect?: boolean;
@@ -46,6 +46,8 @@ interface Quiz {
     points: number;
     timeLimit: number;
     instructions?: string;
+    multipleAttempts?: boolean;   // <-- ensure available in fetched payload
+    maxAttempts?: number;         // <-- ensure available in fetched payload
 }
 
 export default function QuizPreview() {
@@ -75,16 +77,13 @@ export default function QuizPreview() {
         try {
             setLoading(true);
             
-            // Load quiz details
             const quizData = await quizClient.fetchQuizById(qid);
             setQuiz(quizData);
             
-            // Load questions and filter for published only
             const allQuestions = await questionClient.fetchQuestionsForQuiz(cid, qid);
             const publishedQuestions = allQuestions.filter((q: Question) => q.published === true);
             setQuestions(publishedQuestions);
             
-            // Initialize answers object for published questions only
             const initialAnswers: Record<string, string> = {};
             publishedQuestions.forEach((q: Question) => {
                 initialAnswers[q._id] = '';
@@ -115,14 +114,12 @@ export default function QuizPreview() {
             const userAnswer = answers[question._id] || '';
             let isCorrect = false;
 
-            // Grade based on question type
             switch (question.questionType) {
                 case 'Multiple Choice':
                 case 'True False':
                     isCorrect = userAnswer.toLowerCase() === question.correctAnswer.toLowerCase();
                     break;
                 case 'Fill in the Blank':
-                    // Check against all possible answers if available
                     if (question.options && question.options.length > 0) {
                         isCorrect = question.options.some(option => 
                             option.text.toLowerCase().trim() === userAnswer.toLowerCase().trim()
@@ -338,7 +335,7 @@ export default function QuizPreview() {
                                     Edit Quiz
                                 </Button>
                             )}
-                            {showResults && (
+                            {showResults && !!quiz?.multipleAttempts && ( // <-- Only show if multiple attempts allowed
                                 <Button variant="secondary" onClick={resetQuiz}>
                                     Retake Preview
                                 </Button>
@@ -462,9 +459,6 @@ export default function QuizPreview() {
                     </p>
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowSubmitModal(false)}>
-                        Continue Editing
-                    </Button>
                     <Button variant="success" onClick={confirmSubmit}>
                         Submit Preview
                     </Button>
